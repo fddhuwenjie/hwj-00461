@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #FF6B35;
+  --color-primary-dark: #E55A25;
+  --color-primary-light: #FF8F66;
+  --color-brown: #3E2723;
+  --color-brown-light: #5D4037;
+  --color-brown-lighter: #8D6E63;
+  --color-cream: #FFF8F0;
+  --color-success: #4CAF50;
+  --color-danger: #E53935;
+  --color-amber: #FFB300;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-cream);
+  color: var(--color-brown);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-brown-lighter);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brown-light);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.pulse-warning {
+  animation: pulse-warning 1.2s ease-in-out infinite;
+}
+
+.star-rating .star {
+  cursor: pointer;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.star-rating .star:hover {
+  transform: scale(1.2);
+}
+
+.star-rating .star.active {
+  color: var(--color-amber);
+}
+
+.star-rating .star.inactive {
+  color: #D7CCC8;
+}
+
+.card-hover {
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.card-hover:hover {
+  box-shadow: 0 4px 12px rgba(62, 39, 35, 0.12);
+  transform: translateY(-2px);
+}
+
+.tag-cloud-item {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  margin: 4px;
+  transition: transform 0.2s;
+}
+
+.tag-cloud-item:hover {
+  transform: scale(1.1);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
