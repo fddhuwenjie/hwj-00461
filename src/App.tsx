@@ -7,6 +7,9 @@ import Nutrition from "@/pages/Nutrition";
 import Stats from "@/pages/Stats";
 import Profile from "@/pages/Profile";
 import MenuManage from "@/pages/MenuManage";
+import VotePage from "@/pages/VotePage";
+import FeedPage from "@/pages/FeedPage";
+import WeeklyReportPage from "@/pages/WeeklyReportPage";
 import Layout from "@/components/Layout";
 
 function AppContent() {
@@ -31,6 +34,9 @@ function AppContent() {
         <Route path="/nutrition" element={<Nutrition />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/vote" element={<VotePage />} />
+        <Route path="/feed" element={<FeedPage />} />
+        <Route path="/weekly" element={<WeeklyReportPage />} />
       </Routes>
     </Layout>
   );

@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  User, Star, Heart, AlertTriangle, CreditCard, Cloud,
-  Settings, ChevronRight, Trash2, Edit3, Save
+  Star, Heart, AlertTriangle, CreditCard, Cloud,
+  Trash2, Edit3, Save, MessageSquare
 } from 'lucide-react'
 import useAppStore from '@/store'
 import {
   getUserReviews, getFavorites, removeFavorite,
-  setAllergens, getConsumption, getTagCloud, updateUser
+  setAllergens, getConsumption, getTagCloud, updateUser,
+  getPosts, deletePost
 } from '@/services/api'
 
-type TabType = 'reviews' | 'favorites' | 'allergens' | 'consumption' | 'tags'
+type TabType = 'reviews' | 'favorites' | 'allergens' | 'consumption' | 'tags' | 'posts'
 
 const tabs: { key: TabType; label: string; icon: any }[] = [
   { key: 'reviews', label: '评价历史', icon: Star },
   { key: 'favorites', label: '我的收藏', icon: Heart },
+  { key: 'posts', label: '我的动态', icon: MessageSquare },
   { key: 'allergens', label: '过敏原设置', icon: AlertTriangle },
   { key: 'consumption', label: '消费统计', icon: CreditCard },
   { key: 'tags', label: '口味标签云', icon: Cloud },
@@ -42,6 +44,7 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState<TabType>('reviews')
   const [reviews, setReviews] = useState<any[]>([])
   const [favorites, setFavorites] = useState<any[]>([])
+  const [posts, setPosts] = useState<any[]>([])
   const [consumption, setConsumption] = useState<any>(null)
   const [tagCloud, setTagCloud] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,6 +87,10 @@ export default function Profile() {
         case 'tags':
           const tagData = await getTagCloud(currentUser.id)
           setTagCloud(tagData)
+          break
+        case 'posts':
+          const postData = await getPosts({ userId: currentUser.id })
+          setPosts(postData.list || [])
           break
       }
     } catch {
@@ -329,6 +336,95 @@ export default function Profile() {
             <p className="text-center text-sm text-brown-lighter mt-6">
               基于你的历史评价生成，字体越大表示你越喜欢这个口味
             </p>
+          </div>
+        )
+
+      case 'posts':
+        if (posts.length === 0) {
+          return (
+            <div className="text-center py-12 text-brown-lighter">
+              <MessageSquare size={48} className="mx-auto mb-3 opacity-50" />
+              <p>还没有发布过动态，去动态广场分享吧！</p>
+              <button
+                onClick={() => navigate('/feed')}
+                className="mt-4 px-4 py-2 bg-primary text-white rounded-btn text-sm hover:bg-primary-dark transition-colors"
+              >
+                去发布
+              </button>
+            </div>
+          )
+        }
+        return (
+          <div className="space-y-4">
+            {posts.map((post) => {
+              const photoUrls = post.photo_urls || []
+              return (
+                <div
+                  key={post.id}
+                  className="bg-white rounded-card p-5 relative"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold">
+                        {currentUser?.name?.[0] || 'U'}
+                      </div>
+                      <div>
+                        <div className="font-medium text-brown">{currentUser?.name}</div>
+                        <div className="text-xs text-brown-lighter">{post.created_at}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('确定删除这条动态吗？')) return
+                        try {
+                          await deletePost(post.id, currentUser!.id)
+                          setPosts(posts.filter(p => p.id !== post.id))
+                        } catch {}
+                      }}
+                      className="p-1 text-brown-lighter hover:text-danger transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  <p className="text-brown mb-3 whitespace-pre-wrap">{post.content}</p>
+                  {photoUrls.length > 0 && (
+                    <div className={`grid gap-2 mb-3 ${
+                      photoUrls.length === 1 ? 'grid-cols-1' :
+                      photoUrls.length === 2 ? 'grid-cols-2' :
+                      'grid-cols-3'
+                    }`}>
+                      {photoUrls.map((url: string, idx: number) => (
+                        <div
+                          key={idx}
+                          className="aspect-square bg-cover bg-center rounded-lg"
+                          style={{ backgroundImage: `url(${url})` }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {(post.dish_name || post.window_name) && (
+                    <div 
+                      className="flex items-center gap-2 text-sm text-primary bg-primary/5 px-3 py-2 rounded-btn cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => post.dish_id && navigate(`/dish/${post.dish_id}`)}
+                    >
+                      {post.window_name && <span>{post.window_name}</span>}
+                      {post.window_name && post.dish_name && <span>·</span>}
+                      {post.dish_name && <span className="font-medium">{post.dish_name}</span>}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-6 pt-3 border-t border-gray-100 text-sm text-brown-lighter">
+                    <span className="flex items-center gap-1">
+                      <MessageSquare size={14} />
+                      {post.comment_count || 0}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Heart size={14} />
+                      {post.like_count || 0}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )
 

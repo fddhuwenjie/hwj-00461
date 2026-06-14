@@ -72,11 +72,72 @@ db.exec(`
     date TEXT NOT NULL,
     UNIQUE(user_id, dish_id, date)
   );
+  CREATE TABLE IF NOT EXISTS vote_pools (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    window_id INTEGER NOT NULL REFERENCES windows(id),
+    dish_id INTEGER NOT NULL REFERENCES dishes(id),
+    UNIQUE(date, window_id, dish_id)
+  );
+  CREATE TABLE IF NOT EXISTS votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    vote_pool_id INTEGER NOT NULL REFERENCES vote_pools(id),
+    date TEXT NOT NULL,
+    window_id INTEGER NOT NULL,
+    dish_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, date, window_id, dish_id)
+  );
+  CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    content TEXT NOT NULL,
+    photo_urls TEXT DEFAULT '[]',
+    dish_id INTEGER REFERENCES dishes(id),
+    window_id INTEGER REFERENCES windows(id),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS post_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, post_id)
+  );
+  CREATE TABLE IF NOT EXISTS post_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS weekly_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id),
+    week_start TEXT NOT NULL,
+    week_end TEXT NOT NULL,
+    report_type TEXT NOT NULL CHECK(report_type IN ('personal', 'canteen')),
+    report_data TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, week_start, report_type)
+  );
 
   CREATE INDEX IF NOT EXISTS idx_reviews_dish ON reviews(dish_id);
   CREATE INDEX IF NOT EXISTS idx_reviews_user ON reviews(user_id);
   CREATE INDEX IF NOT EXISTS idx_menus_date_meal ON menus(date, meal);
   CREATE INDEX IF NOT EXISTS idx_selections_user_date ON user_selections(user_id, date);
+  CREATE INDEX IF NOT EXISTS idx_votes_date_window ON votes(date, window_id);
+  CREATE INDEX IF NOT EXISTS idx_votes_user_date ON votes(user_id, date);
+  CREATE INDEX IF NOT EXISTS idx_vote_pools_date ON vote_pools(date);
+  CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at);
+  CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_posts_window ON posts(window_id);
+  CREATE INDEX IF NOT EXISTS idx_posts_dish ON posts(dish_id);
+  CREATE INDEX IF NOT EXISTS idx_post_comments_post ON post_comments(post_id);
+  CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+  CREATE INDEX IF NOT EXISTS idx_weekly_reports_user ON weekly_reports(user_id, week_start);
 `)
 
 const count = db.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }
@@ -301,6 +362,119 @@ if (count.c === 0) {
   ]
   for (const s of selections) {
     insertSelection.run(s[0], s[1], s[2])
+  }
+
+  const insertVotePool = db.prepare('INSERT INTO vote_pools (date, window_id, dish_id) VALUES (?, ?, ?)')
+  const tomorrowDate = new Date()
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const tomorrow = tomorrowDate.toISOString().split('T')[0]
+  const poolDishes: Record<number, number[][]> = {
+    1: [[1, 2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]],
+    2: [[21, 22, 23, 24, 25, 26, 27, 28, 29], [30, 31, 32, 33, 34, 35, 36, 37, 38, 39]],
+    3: [[41, 42, 43, 44, 45, 46, 47, 48, 49], [50, 51, 52, 53, 54, 55, 56, 57, 58, 59]],
+  }
+  for (let w = 1; w <= 3; w++) {
+    const allDishes = [...poolDishes[w][0], ...poolDishes[w][1]].slice(0, 9)
+    for (const dishId of allDishes) {
+      insertVotePool.run(tomorrow, w, dishId)
+    }
+  }
+
+  const insertVote = db.prepare('INSERT INTO votes (user_id, vote_pool_id, date, window_id, dish_id) VALUES (?, ?, ?, ?, ?)')
+  const votePoolData = db.prepare('SELECT id, date, window_id, dish_id FROM vote_pools').all() as any[]
+  const vpMap = new Map(votePoolData.map(v => [`${v.date}-${v.window_id}-${v.dish_id}`, v.id]))
+  const sampleVotes: [number, string, number, number][] = [
+    [1, '2026-06-15', 1, 1], [1, '2026-06-15', 1, 2],
+    [1, '2026-06-15', 2, 21], [1, '2026-06-15', 2, 22],
+    [1, '2026-06-15', 3, 41], [1, '2026-06-15', 3, 42],
+    [2, '2026-06-15', 1, 1], [2, '2026-06-15', 1, 3],
+    [2, '2026-06-15', 2, 21], [2, '2026-06-15', 2, 23],
+    [2, '2026-06-15', 3, 41], [2, '2026-06-15', 3, 43],
+    [3, '2026-06-15', 1, 2], [3, '2026-06-15', 1, 4],
+    [3, '2026-06-15', 2, 22], [3, '2026-06-15', 2, 24],
+    [3, '2026-06-15', 3, 42], [3, '2026-06-15', 3, 44],
+    [4, '2026-06-15', 1, 1], [4, '2026-06-15', 1, 5],
+    [4, '2026-06-15', 2, 21], [4, '2026-06-15', 2, 25],
+    [4, '2026-06-15', 3, 45], [4, '2026-06-15', 3, 46],
+    [5, '2026-06-15', 1, 3], [5, '2026-06-15', 1, 6],
+    [5, '2026-06-15', 2, 23], [5, '2026-06-15', 2, 26],
+    [5, '2026-06-15', 3, 42], [5, '2026-06-15', 3, 47],
+    [6, '2026-06-15', 1, 1], [6, '2026-06-15', 1, 7],
+    [6, '2026-06-15', 2, 22], [6, '2026-06-15', 2, 27],
+    [6, '2026-06-15', 3, 48], [6, '2026-06-15', 3, 49],
+    [7, '2026-06-15', 1, 2], [7, '2026-06-15', 1, 8],
+    [7, '2026-06-15', 2, 24], [7, '2026-06-15', 2, 28],
+    [7, '2026-06-15', 3, 45], [7, '2026-06-15', 3, 43],
+    [8, '2026-06-15', 1, 4], [8, '2026-06-15', 1, 9],
+    [8, '2026-06-15', 2, 21], [8, '2026-06-15', 2, 29],
+    [8, '2026-06-15', 3, 41], [8, '2026-06-15', 3, 44],
+    [9, '2026-06-15', 1, 5], [9, '2026-06-15', 1, 2],
+    [9, '2026-06-15', 2, 22], [9, '2026-06-15', 2, 23],
+    [9, '2026-06-15', 3, 46], [9, '2026-06-15', 3, 42],
+    [10, '2026-06-15', 1, 1], [10, '2026-06-15', 1, 3],
+    [10, '2026-06-15', 2, 24], [10, '2026-06-15', 2, 21],
+    [10, '2026-06-15', 3, 41], [10, '2026-06-15', 3, 45],
+  ]
+  for (const [userId, date, windowId, dishId] of sampleVotes) {
+    const vpId = vpMap.get(`${date}-${windowId}-${dishId}`)
+    if (vpId) {
+      insertVote.run(userId, vpId, date, windowId, dishId)
+    }
+  }
+
+  const insertPost = db.prepare('INSERT INTO posts (user_id, content, photo_urls, dish_id, window_id, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+  const samplePosts: [number, string, string, number | null, number | null, string][] = [
+    [1, '今天的麻婆豆腐太好吃了！麻辣鲜香，配米饭绝了👍', '["/photos/mapo.jpg"]', 1, 1, '2026-06-15 12:35:00'],
+    [2, '轻食沙拉很新鲜，酱汁调得很棒，健康又美味🥗', '[]', 41, 3, '2026-6-15 12:20:00'],
+    [4, '红烧肉肥而不腻，入口即化，强烈推荐！', '["/photos/hongshaorou.jpg"]', 21, 2, '2026-06-15 12:15:00'],
+    [5, '烤鸡胸肉很嫩，减脂期必备，每天都来打卡💪', '[]', 46, 3, '2026-06-15 12:30:00'],
+    [1, '毛血旺料超足，鸭血很嫩，麻辣过瘾🌶️', '["/photos/maoxuewang.jpg"]', 9, 1, '2026-06-17 12:10:00'],
+    [10, '凉拌黄瓜清脆爽口，夏天必点！', '[]', 60, 3, '2026-06-19 12:55:00'],
+    [4, '番茄炖牛腩太好吃了，牛腩炖得很烂，汤都喝光了🍅', '["/photos/niunan.jpg"]', 22, 2, '2026-06-19 12:25:00'],
+    [6, '土豆炖牛肉非常入味，牛肉很烂，性价比高', '["/photos/tudouniurou.jpg"]', 32, 2, '2026-06-18 12:45:00'],
+    [7, '清炖羊肉汤很鲜美，冬天喝很暖和，推荐！', '["/photos/yangrou.jpg"]', 37, 2, '2026-06-18 12:30:00'],
+    [3, '宫保鸡丁味道还行，就是花生不够脆，希望改进', '[]', 2, 1, '2026-06-15 12:25:00'],
+    [8, '辣子鸡辣得过瘾，很下饭！就是油有点多', '[]', 6, 1, '2026-06-16 12:25:00'],
+    [2, '希腊酸奶碗很好吃，水果也新鲜，早餐首选', '[]', 45, 3, '2026-06-16 12:15:00'],
+  ]
+  for (const p of samplePosts) {
+    insertPost.run(p[0], p[1], p[2], p[3], p[4], p[5])
+  }
+
+  const insertLike = db.prepare('INSERT INTO post_likes (user_id, post_id) VALUES (?, ?)')
+  const sampleLikes: [number, number][] = [
+    [2, 1], [3, 1], [4, 1], [5, 1],
+    [1, 2], [3, 2], [6, 2],
+    [1, 3], [2, 3], [5, 3], [6, 3], [7, 3],
+    [1, 4], [2, 4], [3, 4],
+    [2, 5], [3, 5], [4, 5], [6, 5], [7, 5],
+    [1, 6], [2, 6], [3, 6], [4, 6],
+    [1, 7], [2, 7], [3, 7], [5, 7], [8, 7],
+    [1, 8], [2, 8], [4, 8], [5, 8],
+    [1, 9], [3, 9], [4, 9], [5, 9], [6, 9],
+    [1, 10], [4, 10], [5, 10],
+    [2, 11], [4, 11], [6, 11], [7, 11],
+    [1, 12], [3, 12], [4, 12],
+  ]
+  for (const l of sampleLikes) {
+    insertLike.run(l[0], l[1])
+  }
+
+  const insertComment = db.prepare('INSERT INTO post_comments (user_id, post_id, content, created_at) VALUES (?, ?, ?, ?)')
+  const sampleComments: [number, number, string, string][] = [
+    [2, 1, '看起来好好吃！明天我也去尝尝', '2026-06-15 12:40:00'],
+    [3, 1, '同意！麻婆豆腐是我的最爱', '2026-06-15 12:42:00'],
+    [1, 2, '减脂餐也能这么好吃，厉害', '2026-06-15 12:25:00'],
+    [5, 3, '红烧肉确实绝了，每次必点', '2026-06-15 12:20:00'],
+    [6, 5, '毛血旺是川味小炒的招牌！', '2026-06-17 12:15:00'],
+    [7, 5, '看起来就很有食欲，流口水了🤤', '2026-06-17 12:20:00'],
+    [3, 7, '番茄炖牛腩很下饭，我也经常点', '2026-06-19 12:30:00'],
+    [8, 8, '土豆炖牛肉性价比超高，量大管饱', '2026-06-18 12:50:00'],
+    [2, 9, '冬天喝羊肉汤确实舒服', '2026-06-18 12:35:00'],
+    [1, 10, '下次让阿姨多放点花生😂', '2026-06-15 12:30:00'],
+  ]
+  for (const c of sampleComments) {
+    insertComment.run(c[0], c[1], c[2], c[3])
   }
 }
 

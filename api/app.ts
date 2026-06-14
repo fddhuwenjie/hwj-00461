@@ -20,6 +20,10 @@ import recommendRoutes from './routes/recommend.js'
 import nutritionRoutes from './routes/nutrition.js'
 import statsRoutes from './routes/stats.js'
 import favoriteRoutes from './routes/favorites.js'
+import voteRoutes from './routes/votes.js'
+import postRoutes from './routes/posts.js'
+import weeklyRoutes from './routes/weekly.js'
+import windowRoutes from './routes/windows.js'
 
 // for esm mode
 const __filename = fileURLToPath(import.meta.url)
@@ -46,6 +50,10 @@ app.use('/api/recommend', recommendRoutes)
 app.use('/api/nutrition', nutritionRoutes)
 app.use('/api/stats', statsRoutes)
 app.use('/api/favorites', favoriteRoutes)
+app.use('/api/votes', voteRoutes)
+app.use('/api/posts', postRoutes)
+app.use('/api/weekly', weeklyRoutes)
+app.use('/api/windows', windowRoutes)
 
 /**
  * health

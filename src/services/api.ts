@@ -146,3 +146,110 @@ export const getConsumption = (userId: number, period: string) =>
 
 export const getTagCloud = (userId: number) =>
   request<any[]>(`/users/${userId}/tag-cloud`)
+
+export const getVotePool = (date: string) =>
+  request<any[]>(`/votes/pool?date=${date}`)
+
+export const getMyVotes = (userId: number, date: string) =>
+  request<any[]>(`/votes/my-votes?userId=${userId}&date=${date}`)
+
+export const submitVotes = (userId: number, date: string, votes: any[]) =>
+  request<any>('/votes/vote', {
+    method: 'POST',
+    body: JSON.stringify({ userId, date, votes }),
+  })
+
+export const generateMenuFromVotes = (date: string, meal?: string, dishCount?: number) =>
+  request<any>('/votes/generate-menu', {
+    method: 'POST',
+    body: JSON.stringify({ date, meal, dishCount }),
+  })
+
+export const createVotePool = (date: string, window_id: number, dish_ids: number[]) =>
+  request<any>('/votes/pool', {
+    method: 'POST',
+    body: JSON.stringify({ date, window_id, dish_ids }),
+  })
+
+export const getPosts = (params?: { windowId?: number; dishId?: number; userId?: number; page?: number; limit?: number }) => {
+  let url = '/posts'
+  const query = new URLSearchParams()
+  if (params?.windowId) query.set('windowId', String(params.windowId))
+  if (params?.dishId) query.set('dishId', String(params.dishId))
+  if (params?.userId) query.set('userId', String(params.userId))
+  if (params?.page) query.set('page', String(params.page))
+  if (params?.limit) query.set('limit', String(params.limit))
+  const qs = query.toString()
+  if (qs) url += `?${qs}`
+  return request<any>(url)
+}
+
+export const getPost = (id: number) =>
+  request<any>(`/posts/${id}`)
+
+export const getPostComments = (id: number) =>
+  request<any[]>(`/posts/${id}/comments`)
+
+export const createPost = (data: { userId: number; content: string; photoUrls?: string[]; dishId?: number; windowId?: number }) =>
+  request<any>('/posts', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
+export const updatePost = (id: number, data: { userId: number; content: string; photoUrls?: string[] }) =>
+  request<any>(`/posts/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+
+export const deletePost = (id: number, userId: number) =>
+  request<any>(`/posts/${id}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ userId }),
+  })
+
+export const likePost = (id: number, userId: number) =>
+  request<any>(`/posts/${id}/like`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  })
+
+export const checkPostLiked = (id: number, userId: number) =>
+  request<any>(`/posts/${id}/liked?userId=${userId}`)
+
+export const commentPost = (id: number, userId: number, content: string) =>
+  request<any>(`/posts/${id}/comment`, {
+    method: 'POST',
+    body: JSON.stringify({ userId, content }),
+  })
+
+export const deleteComment = (commentId: number, userId: number) =>
+  request<any>(`/posts/comment/${commentId}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ userId }),
+  })
+
+export const getPersonalWeeklyReport = (userId: number, date?: string) => {
+  let url = `/weekly/personal?userId=${userId}`
+  if (date) url += `&date=${date}`
+  return request<any>(url)
+}
+
+export const getCanteenWeeklyReport = (date?: string) => {
+  let url = '/weekly/canteen'
+  if (date) url += `?date=${date}`
+  return request<any>(url)
+}
+
+export const getWeeklyHistory = (userId?: number, type?: string) => {
+  let url = '/weekly/history'
+  const query = new URLSearchParams()
+  if (userId) query.set('userId', String(userId))
+  if (type) query.set('type', type)
+  const qs = query.toString()
+  if (qs) url += `?${qs}`
+  return request<any[]>(url)
+}
+
+export const getWindows = () =>
+  request<any[]>('/windows')

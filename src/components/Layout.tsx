@@ -1,9 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { UtensilsCrossed, ClipboardList, Star, Salad, BarChart3, User, LogIn, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import { UtensilsCrossed, ClipboardList, Star, Salad, BarChart3, User, LogIn, LogOut, ChevronLeft, ChevronRight, Vote, MessageSquare, Calendar } from 'lucide-react'
 import useAppStore from '@/store'
 
 const navItems = [
   { to: '/', icon: UtensilsCrossed, label: '今日菜单' },
+  { to: '/vote', icon: Vote, label: '菜品投票' },
+  { to: '/feed', icon: MessageSquare, label: '食堂动态' },
+  { to: '/weekly', icon: Calendar, label: '周报' },
   { to: '/menu', icon: ClipboardList, label: '菜单管理' },
   { to: '/recommend', icon: Star, label: '智能推荐' },
   { to: '/nutrition', icon: Salad, label: '营养追踪' },
